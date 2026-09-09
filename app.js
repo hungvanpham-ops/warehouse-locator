@@ -1,12 +1,9 @@
-/* Warehouse Locator - app.js
-   Features:
-   - Uses warehouse-layout.png as background (ensure the image exists)
-   - 200 seeded locations with coords in percent
-   - Click markers to edit; Add mode to create new
-   - Search SKU or Location ID; highlights and blinks matches
-   - Zoom & pan (mouse wheel and drag; touch drag & pinch)
-   - QR scanner (jsQR) and QR generator (qrcode)
-   - Import/Export JSON and localStorage persistence
+/* Warehouse Locator - updated app.js
+   - mapInner sized to image natural size; markers positioned relative to image pixels
+   - transforms (translate/scale) applied to mapInner so markers stay on correct points
+   - improved initial fit (zoomed in) and correct marker placement
+   - only markers with valid coords (0..100) are rendered
+   - preserves features: add/edit, search, highlight, blink, zoom/pan, QR scan/gen, import/export, localStorage
 */
 
 (() => {
@@ -28,7 +25,7 @@
   const detailEl = document.getElementById('detail');
   const markersEl = document.getElementById('markers');
   const viewport = document.getElementById('viewport');
-  const map = document.getElementById('map');
+  const mapInner = document.getElementById('mapInner');
   const floorplan = document.getElementById('floorplan');
 
   const editModal = document.getElementById('editModal');
@@ -66,7 +63,7 @@
   let prefs = {};
   let markerEls = new Map();
 
-  // Pan & zoom state
+  // Transform/pan state
   let scale = 1;
   let translateX = 0;
   let translateY = 0;
@@ -80,7 +77,7 @@
   let rafId = null;
 
   // Utilities
-  function showToast(msg, t = 2200) {
+  function showToast(msg, t = 2000) {
     toast.textContent = msg;
     toast.style.display = 'block';
     setTimeout(()=>toast.style.display='none', t);
@@ -102,7 +99,7 @@
   function savePrefs() { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }
   function loadPrefs() { try { return JSON.parse(localStorage.getItem(PREF_KEY) || '{}') } catch { return {} } }
 
-  // Seed sample data
+  // Seed sample data (coords in percent 0..100)
   function createSampleData() {
     const items = [];
     const cols = 20;
@@ -115,8 +112,9 @@
         const sku = `SKU-${String(i).padStart(4,'0')}`;
         const name = `Product ${i}`;
         const qty = Math.floor(Math.random()*200)+1;
-        const left = (c + 0.5) * (100 / cols);
-        const top = (r + 0.5) * (100 / rows);
+        // Place markers more centrally (exclude margins by using 6..94 range)
+        const left = 6 + (c + 0.5) * ((88) / cols);
+        const top = 6 + (r + 0.5) * ((88) / rows);
         items.push({ id, sku, name, qty, coords:{left: Number(left.toFixed(2)), top: Number(top.toFixed(2))} });
       }
     }
@@ -132,7 +130,18 @@
     } else db = loaded;
   }
 
-  // Render markers
+  // Ensure mapInner size equals image natural size
+  function updateMapInnerSize(){
+    const iw = floorplan.naturalWidth || floorplan.width || 2000;
+    const ih = floorplan.naturalHeight || floorplan.height || 1200;
+    mapInner.style.width = iw + 'px';
+    mapInner.style.height = ih + 'px';
+    // position image at 0,0 and markers overlay assume same pixel origin
+    markersEl.style.width = iw + 'px';
+    markersEl.style.height = ih + 'px';
+  }
+
+  // Render markers relative to image natural pixels
   function clearMarkers() {
     markersEl.innerHTML = '';
     markerEls.clear();
@@ -140,24 +149,34 @@
 
   function renderMarkers() {
     clearMarkers();
+    updateMapInnerSize();
+    const iw = parseFloat(mapInner.style.width);
+    const ih = parseFloat(mapInner.style.height);
+
     db.forEach(item => {
+      if (!item.coords || typeof item.coords.left !== 'number' || typeof item.coords.top !== 'number') return;
+      // Only create markers with coords inside 0..100
+      if (item.coords.left < 0 || item.coords.left > 100 || item.coords.top < 0 || item.coords.top > 100) return;
+      const x = (item.coords.left / 100) * iw;
+      const y = (item.coords.top / 100) * ih;
       const el = document.createElement('div');
       el.className = 'marker';
       el.title = `${item.id} • ${item.sku} • ${item.name}`;
       el.dataset.id = item.id;
-      el.style.left = item.coords.left + '%';
-      el.style.top = item.coords.top + '%';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
       el.textContent = item.id.split('-').pop();
       el.addEventListener('click', (ev) => {
         ev.stopPropagation();
         openEdit(item.id);
+        highlightMatches([item.id]);
       });
       markersEl.appendChild(el);
       markerEls.set(item.id, el);
     });
   }
 
-  // Detail / Matches rendering
+  // Matches and detail
   function renderMatches(list) {
     matchesEl.innerHTML = '';
     if (!list.length) {
@@ -167,7 +186,7 @@
     list.forEach(it => {
       const div = document.createElement('div');
       div.className = 'match-item';
-      div.innerHTML = `<div><strong>${it.sku}</strong><div style="font-size:12px;color:${getComputedStyle(document.documentElement).getPropertyValue('--muted')}">${it.id} • ${it.name}</div></div>
+      div.innerHTML = `<div><strong>${it.sku}</strong><div style="font-size:12px;color:var(--muted)">${it.id} • ${it.name}</div></div>
         <div><button data-id="${it.id}" class="goto">Show</button></div>`;
       matchesEl.appendChild(div);
       div.querySelector('.goto').addEventListener('click', ()=>{ openEdit(it.id); centerOn(it); });
@@ -178,7 +197,7 @@
     if (!item) { detailEl.innerHTML = 'Click a marker to view or edit a location.'; return; }
     detailEl.innerHTML = `
       <div><strong>${item.id}</strong></div>
-      <div style="font-size:13px;color:${getComputedStyle(document.documentElement).getPropertyValue('--muted')}">${item.sku} • ${item.name}</div>
+      <div style="font-size:13px;color:var(--muted)">${item.sku} • ${item.name}</div>
       <div style="margin-top:8px">Quantity: <strong>${item.qty}</strong></div>
       <div style="margin-top:8px">Coords: ${item.coords.left}% , ${item.coords.top}%</div>
       <div style="margin-top:8px"><button id="detailEdit">Edit</button></div>
@@ -222,19 +241,14 @@
     if (!locId || !sku) { showToast('Location ID & SKU required'); return; }
 
     if (selected) {
-      // update existing
+      // update selected fields
       selected.id = locId;
       selected.sku = sku;
       selected.name = name;
       selected.qty = qty;
-      // update db id key uniqueness: ensure no duplicates
-      db = db.map(it => it === selected ? selected : it);
     } else {
-      // create at center of viewport
-      const rect = map.getBoundingClientRect();
-      const left = Math.min(98, Math.max(2, (50))); // center default
-      const top = Math.min(98, Math.max(2, (50)));
-      const newItem = { id: locId, sku, name, qty, coords:{left, top} };
+      // shouldn't reach often; create default centered
+      const newItem = { id: locId, sku, name, qty, coords:{left:50, top:50} };
       db.push(newItem);
     }
     saveDB();
@@ -253,25 +267,31 @@
     showToast('Deleted');
   });
 
-  // Adding new location by clicking map when addMode on
+  // Add mode: click to add marker at image pixel
   addModeBtn.addEventListener('click', ()=>{
     addMode = !addMode;
     addModeBtn.style.background = addMode ? 'var(--accent)' : '';
     addModeBtn.style.color = addMode ? '#fff' : '';
-    showToast(addMode ? 'Add mode ON: tap on map to add a location' : 'Add mode OFF');
+    showToast(addMode ? 'Add mode ON: click on the map image to add a location' : 'Add mode OFF');
   });
 
-  map.addEventListener('click',(ev)=>{
+  // Click on mapInner to add when addMode
+  mapInner.addEventListener('click', (ev)=>{
+    // Calculate click relative to image pixel space (before transform)
+    // Inverse transform: (screen - translate) / scale
     if (!addMode) return;
-    // compute percent coords relative to map bounding rect
-    const rect = map.getBoundingClientRect();
-    const x = ev.clientX - rect.left;
-    const y = ev.clientY - rect.top;
-    const leftPercent = Number(((x / rect.width) * 100).toFixed(2));
-    const topPercent = Number(((y / rect.height) * 100).toFixed(2));
-    // create new temp item and open edit modal prefilled
+    ev.stopPropagation();
+    const vpRect = viewport.getBoundingClientRect();
+    const clickX = ev.clientX - vpRect.left;
+    const clickY = ev.clientY - vpRect.top;
+    const imgX = (clickX - translateX) / scale;
+    const imgY = (clickY - translateY) / scale;
+    const iw = parseFloat(mapInner.style.width);
+    const ih = parseFloat(mapInner.style.height);
+    const leftPercent = Math.min(99.99, Math.max(0.01, (imgX / iw) * 100));
+    const topPercent = Math.min(99.99, Math.max(0.01, (imgY / ih) * 100));
     const newId = generateNextId();
-    const newItem = { id: newId, sku: `SKU-${String(Math.floor(Math.random()*9999)+1).padStart(4,'0')}`, name:'', qty:0, coords:{left:leftPercent, top:topPercent} };
+    const newItem = { id: newId, sku: `SKU-${String(Math.floor(Math.random()*9999)+1).padStart(4,'0')}`, name:'', qty:0, coords:{left: Number(leftPercent.toFixed(2)), top: Number(topPercent.toFixed(2))} };
     db.push(newItem);
     saveDB();
     renderMarkers();
@@ -321,29 +341,27 @@
     });
   }
 
+  // Center on item: compute translate to put item at center of viewport
   function centerOn(item){
-    // center viewport on item by adjusting translate
-    // compute center of viewport in pixels then set translate to move target to center
+    if (!item) return;
+    const iw = parseFloat(mapInner.style.width);
+    const ih = parseFloat(mapInner.style.height);
+    const targetX = (item.coords.left / 100) * iw;
+    const targetY = (item.coords.top / 100) * ih;
     const vp = viewport.getBoundingClientRect();
-    const mapRect = map.getBoundingClientRect();
-    const targetX = (item.coords.left / 100) * mapRect.width;
-    const targetY = (item.coords.top / 100) * mapRect.height;
-    // compute new translate to put (targetX * scale + translateX) at vp center
-    // simpler: set translate s.t. map is centered roughly with target at center top-left adjust
-    const centerX = vp.width / 2;
-    const centerY = vp.height / 2;
-    // Convert to current transform space
-    translateX = centerX - targetX * scale;
-    translateY = centerY - targetY * scale;
+    const cx = vp.width / 2;
+    const cy = vp.height / 2;
+    translateX = cx - targetX * scale;
+    translateY = cy - targetY * scale;
     applyTransform();
   }
 
-  // Pan & zoom handlers
+  // Transform application
   function applyTransform(){
-    map.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    mapInner.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
   }
 
-  // Wheel to zoom centered at cursor (approximate)
+  // Wheel zoom centered
   viewport.addEventListener('wheel',(e)=>{
     e.preventDefault();
     const delta = -e.deltaY;
@@ -351,17 +369,15 @@
     const rect = viewport.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
-    // compute world coordinate before
     const wx = (cx - translateX) / scale;
     const wy = (cy - translateY) / scale;
-    scale = Math.min(4, Math.max(0.5, scale * zoomFactor));
-    // compute translate to keep point under cursor
+    scale = Math.min(6, Math.max(0.4, scale * zoomFactor));
     translateX = cx - wx * scale;
     translateY = cy - wy * scale;
     applyTransform();
   }, { passive:false });
 
-  // Mouse pan
+  // Pan with mouse
   viewport.addEventListener('mousedown',(e)=>{
     isPanning = true;
     panStart = {x:e.clientX, y:e.clientY};
@@ -411,7 +427,7 @@
         const cy = (e.touches[0].clientY + e.touches[1].clientY)/2 - rect.top;
         const wx = (cx - translateX) / scale;
         const wy = (cy - translateY) / scale;
-        scale = Math.min(4, Math.max(0.5, scale * factor));
+        scale = Math.min(6, Math.max(0.4, scale * factor));
         translateX = cx - wx * scale;
         translateY = cy - wy * scale;
         applyTransform();
@@ -425,37 +441,37 @@
 
   function getTouchDist(touches){ const dx = touches[0].clientX - touches[1].clientX; const dy = touches[0].clientY - touches[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
 
+  // Zoom buttons
   zoomInBtn && zoomInBtn.addEventListener('click', ()=>{
-    const rect = viewport.getBoundingClientRect();
-    const cx = rect.width/2; const cy = rect.height/2;
+    const vp = viewport.getBoundingClientRect();
+    const cx = vp.width/2; const cy = vp.height/2;
     const wx = (cx - translateX)/scale; const wy = (cy - translateY)/scale;
-    scale = Math.min(4, scale * 1.2);
+    scale = Math.min(6, scale * 1.2);
     translateX = cx - wx * scale; translateY = cy - wy * scale; applyTransform();
   });
   zoomOutBtn && zoomOutBtn.addEventListener('click', ()=>{
-    const rect = viewport.getBoundingClientRect();
-    const cx = rect.width/2; const cy = rect.height/2;
+    const vp = viewport.getBoundingClientRect();
+    const cx = vp.width/2; const cy = vp.height/2;
     const wx = (cx - translateX)/scale; const wy = (cy - translateY)/scale;
-    scale = Math.max(0.5, scale / 1.2);
+    scale = Math.max(0.4, scale / 1.2);
     translateX = cx - wx * scale; translateY = cy - wy * scale; applyTransform();
   });
   fitBtn && fitBtn.addEventListener('click', fitToViewport);
 
+  // Fit mapInner to viewport with a comfortable zoom-in
   function fitToViewport(){
-    // Reset transforms and scale to fit floorplan within viewport
-    translateX = 0; translateY = 0; scale = 1;
-    // If image larger, fit by width
+    updateMapInnerSize();
     const vp = viewport.getBoundingClientRect();
-    const imgRatio = floorplan.naturalWidth / floorplan.naturalHeight || 1;
-    const vpRatio = vp.width / vp.height;
-    if (imgRatio > vpRatio) {
-      scale = (vp.width / floorplan.naturalWidth) * 0.98;
-    } else {
-      scale = (vp.height / floorplan.naturalHeight) * 0.98;
-    }
-    // center
-    translateX = (vp.width - floorplan.naturalWidth * scale) / 2;
-    translateY = (vp.height - floorplan.naturalHeight * scale) / 2;
+    const iw = parseFloat(mapInner.style.width);
+    const ih = parseFloat(mapInner.style.height);
+    if (!iw || !ih) return;
+    const sx = vp.width / iw;
+    const sy = vp.height / ih;
+    const base = Math.min(sx, sy) * 0.96;
+    // Slightly zoom in for better visibility
+    scale = Math.min(6, Math.max(0.4, base * 1.25));
+    translateX = (vp.width - iw * scale) / 2;
+    translateY = (vp.height - ih * scale) / 2;
     applyTransform();
   }
 
@@ -571,7 +587,7 @@
     const text = qrText.value.trim();
     if (!text) return showToast('Enter text or SKU');
     qrcodeContainer.innerHTML = '';
-    QRCode.toCanvas(document.createElement('canvas'), text, { width:200 }, (err,canvas)=>{
+    QRCode.toCanvas(document.createElement('canvas'), text, { width:220 }, (err,canvas)=>{
       if (err) { console.error(err); showToast('Failed to generate QR'); return; }
       qrcodeContainer.appendChild(canvas);
     });
@@ -590,64 +606,43 @@
     saveDB(); renderMarkers(); showToast('Reset to sample seed');
   });
 
-  // Click outside modals to close
+  // Close modals clicking backdrop
   document.querySelectorAll('.modal').forEach(m=>{
     m.addEventListener('click',(e)=>{ if (e.target.classList.contains('modal-backdrop')) m.setAttribute('aria-hidden','true'); });
   });
 
-  // Helpers
+  // Fit map on image load
   function fitOnLoad(){
     if (!floorplan.complete) {
-      floorplan.addEventListener('load', fitToViewportOnce);
-    } else fitToViewportOnce();
+      floorplan.addEventListener('load', () => { updateMapInnerSize(); fitToViewport(); renderMarkers(); });
+    } else {
+      updateMapInnerSize();
+      fitToViewport();
+      renderMarkers();
+    }
   }
-  function fitToViewportOnce(){
-    // center image naturally and set initial scale
-    const vp = viewport.getBoundingClientRect();
-    const iw = floorplan.naturalWidth;
-    const ih = floorplan.naturalHeight;
-    if (!iw || !ih) { translateX=0; translateY=0; scale=1; applyTransform(); return; }
-    const sx = vp.width / iw;
-    const sy = vp.height / ih;
-    scale = Math.min(sx, sy) * 0.98;
-    translateX = (vp.width - iw * scale) / 2;
-    translateY = (vp.height - ih * scale) / 2;
-    applyTransform();
-  }
-
-  function fitToViewport(){ fitToViewportOnce(); }
 
   // Initial load
   function init(){
     prefs = loadPrefs();
     seedIfEmpty();
-    renderMarkers();
-    savePrefs();
+    fitOnLoad();
+    applyTransform();
 
-    // wire UI simple behaviors
-    searchInput.placeholder = 'Search SKU or Location ID';
+    // click outside clears selection
     document.body.addEventListener('click', ()=>{ clearHighlights(); showDetail(null); });
 
-    // when clicking a marker, render detail
-    markersEl.addEventListener('click', (e)=>{
-      const el = e.target.closest('.marker');
-      if (!el) return;
-      const it = db.find(d=>d.id === el.dataset.id);
-      showDetail(it);
-    });
+    // clicking markers handled in renderMarkers
+    renderMarkers();
 
-    // center on first item initially
-    if (db.length) centerOn(db[0]);
-
-    fitOnLoad();
-    window.addEventListener('resize', fitOnLoad);
-    applyTransform();
+    // initial center on a central cluster
+    if (db.length) centerOn(db[Math.floor(db.length/2)]);
+    window.addEventListener('resize', ()=>{ fitToViewport(); });
   }
 
-  // on load actions
   init();
 
-  // Expose for debugging
+  // Expose debug
   window.WarehouseLocator = {
     getDB: ()=>db,
     saveDB,
