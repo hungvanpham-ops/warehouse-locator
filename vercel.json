@@ -1,10 +1,16 @@
 {
   "version": 2,
-  "name": "warehouse-locator-floorplan",
+  "name": "warehouse-locator-dots",
   "builds": [
-    { "src": "index.html", "use": "@vercel/static" }
+    { "src": " };
+   index.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a "/(.*)", "dest": "/index.html" }
   ]
 }
+``` = document.createElement('a');
+    a.href = url;
+    a.download = `warehouse-export-${new Date().
