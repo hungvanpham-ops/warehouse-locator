@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Warehouse Locator</title>
-  <meta name="description" content="Warehouse Locator with warehouse floorplan background, searchable locations, QR scanner and generator." />
+  <meta name="description" content="Warehouse Locator - chỉnh sửa vị trí trên bản đồ kho" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>Warehouse Locator</h1>
-        <small>Interactive floorplan with locations</small>
+        <small>Interactive floorplan with correct markers</small>
       </div>
 
       <div class="top-controls">
@@ -30,7 +30,7 @@
             <input id="importInput" type="file" accept="application/json" />
           </label>
           <button id="qrScanBtn" title="Scan QR">Scan QR</button>
-          <button id="qrGenBtn" title="Generate QR">Gen QR</button>
+          <button id="qrGenBtn" title="Gen QR">Gen QR</button>
           <button id="resetBtn" title="Reset seed">Reset</button>
           <button id="zoomInBtn" title="Zoom In">+</button>
           <button id="zoomOutBtn" title="Zoom Out">−</button>
@@ -48,14 +48,15 @@
         <div id="detail" class="detail">Click a marker to view or edit a location.</div>
 
         <div class="panel-foot">
-          <small>Tip: Click "Add Location" then tap on the map to create a new location.</small>
+          <small>Tip: Click "Add Location" then click the map to create a new location.</small>
         </div>
       </aside>
 
       <section class="map-area">
         <div id="viewport" class="viewport">
-          <div id="map" class="map">
-            <img id="floorplan" src="warehouse-layout.png" alt="Warehouse layout" />
+          <!-- mapInner will be sized to actual image natural size; transforms applied to mapInner -->
+          <div id="mapInner" class="map-inner">
+            <img id="floorplan" src="warehouse-layout.png" alt="Warehouse layout" draggable="false" />
             <div id="markers" class="markers"></div>
           </div>
         </div>
