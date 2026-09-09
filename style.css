@@ -30,191 +30,83 @@ body{
 .search-row{display:flex;gap:8px;align-items:center}
 .search-row input{padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);min-width:260px}
 .search-row button{padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);background:var(--accent);color:#fff;cursor:pointer}
-.search-row #clearSearch```html name=index.html
-<!doctype html>
-<html lang="vi">
-<head>
-  <meta charset="Btn{background:transparent;color:var(--muted);border:1px solid rgba(0,0,0,0.04)}
+.search-row #clearSearchBtn{background:transparent;color:var(--muted);border:1px solid rgba(0,0,0,0.04)}
 
-.actionsutf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Warehouse Locator</title>
-  <meta name="description" content="Warehouse Locator - mỗi ô hiển thị như một chấm trên bản đồ kho" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div-row{display:flex;gap:8px;align-items:center}
+.actions-row{display:flex;gap:8px;align-items:center}
 .actions-row button, .import-label{
   padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid rgba(0,0,0,0.06);cursor:pointer;
 }
 .import-label input{display:none}
 .actions-row .danger{background:transparent;color:var(--danger)}
 
-.main{display:flex;gap:12 id="app" class="app">
-    <header class="topbar">
-      <div class="brand">
-        <h1>Warehouse Locator</h1>
-        <small>Each cell shown as a dot</small>
-      </div>
-
-      <div class="top-controls">
-        <div class="search-row">
-          <input id="searchInput"px;padding:12px;align-items:flex-start}
-.panel{width:340px;background placeholder="Search SKU or Location ID" />
-          <button id="searchBtn">Search</:var(--panel);padding:14px;border-radius:12px;box-shadow:var(--shadow);height:calc(100vhbutton>
-          <button id="clearSearchBtn" title="Clear search">Clear</button>
-        </div>
-
-        <div class="actions-row">
-          <button id="addModeBtn" title="Add location"> - 120px);overflow:auto}
+.main{display:flex;gap:12px;padding:12px;align-items:flex-start}
+.panel{width:340px;background:var(--panel);padding:14px;border-radius:12px;box-shadow:var(--shadow);height:calc(100vh - 120px);overflow:auto}
 .panel h2{margin-top:0;font-size:16px}
-.matches{display:flexAdd Location</button>
-          <button id="exportBtn" title="Export JSON">Export</button>
-          <label class="import-label">
-            Import
-            <input id="importInput" type="file" accept="application/json" />
-          </label>
-          <button;flex-direction:column;gap:8px}
-.match-item{padding:8px;border-radius:8px id="qrScanBtn" title="Scan QR">Scan QR</button>
-          <;border:1px solid rgba(0,0,0,0.04);display:flex;button id="qrGenBtn" title="Gen QR">Gen QR</button>
-          <button id="resetBtnjustify-content:space-between;align-items:center;background:linear-gradient(180deg,rgba(255,255," title="Reset seed">Reset</button>
-          <button id="zoomInBtn" title="Zoom In">+</button>
-          <button id="zoomOutBtn" title="Zoom Out">−</button>
-          <255,0.6),transparent)}
-.detail{padding:10px;border-radius:8px;border:1px solid rgba(button id="fitBtn" title="Fit">Fit</button>
-        </div>
-      </div>
-0,0,0,0.04);min-height:160px}
+.matches{display:flex;flex-direction:column;gap:8px}
+.match-item{padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,rgba(255,255,255,0.6),transparent)}
+.detail{padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);min-height:160px}
 
 /* Map area */
-.map-area{flex:1;min-width:    </header>
-
-    <main class="main">
-      <aside class="panel">
-        <h2>Matches</h2>
-        <div id="matches" class="matches"></div>
-
-        <h0}
-.viewport{width:100%;height:calc(100vh - 160px);background:linear-gradient2>Selected Location</h2>
-        <div id="detail" class="detail">Click a dot(180deg,rgba(0,0,0,0.02),transparent);border-radius:12px;overflow:hidden to view or edit a location.</div>
-
-        <div class="panel-foot">
-          <small>Tip: Click "Add Location" then click the map to create a new dot location.</small>
-        </div>
-      </aside>
-
-;position:relative;box-shadow:var(--shadow)}
-.map-inner{position:absolute;left:0      <section class="map-area">
-        <div id="viewport" class="viewport">
-          <;top:0;transform-origin:0 0;will-change:transform}
-.map-inner img{displaydiv id="mapInner" class="map-inner">
-            <img id="floorplan" src="warehouse-layout.png" alt="Warehouse layout" draggable="false" />
-            <div id="markers" class="markers"></:block;user-select:none;pointer-events:none;max-width:none;height:auto}
-.markers{div>
-          </div>
-        </div>
-      </section>
-    </mainposition:absolute;left:0;top:0;pointer-events:none}
+.map-area{flex:1;min-width:0}
+.viewport{width:100%;height:calc(100vh - 160px);background:linear-gradient(180deg,rgba(0,0,0,0.02),transparent);border-radius:12px;overflow:hidden;position:relative;box-shadow:var(--shadow)}
+.map-inner{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.map-inner img{display:block;user-select:none;pointer-events:none;max-width:none;height:auto}
+.markers{position:absolute;left:0;top:0;pointer-events:none}
 
 /* marker - SMALL DOT PER CELL */
-.marker>
-
-    <footer class="footer">
-     {
-  position:absolute;
-  transform:translate(-50%,-50%);
-  width:8px;
- <div>LocalStorage persistence • Mobile responsive • QR scan & generator</div>
-    </footer>
-  </div  height:8px;
-  border-radius:50%;
-  background:var(--marker);
-  border>
-
-  <!-- Edit Modal -->
-  <div id="editModal" class="modal" aria-hidden="true">
-    <div class="modal:1.5px solid var(--marker-edge);
-  box-shadow:0 4-content">
-      <header><h3>Edit Location</h3><button id="closeEdit">Close</button></header>
-      <div class="modal-body">
-        <form idpx 8px rgba(2,6,23,0.14="editForm">
-          <label>Location ID<input id="fieldLocationId" required /></label>
-          <label);
-  cursor:pointer;
-  pointer-events:auto;
-  transition:transform 120ms ease, box-shadow 120ms ease, opacity>SKU<input id="fieldSKU" required /></label>
-          <label>Product Name<input id="fieldName" /></label>
- 160ms ease;
-  opacity:0.95;
+.marker{
+  position:absolute;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:var(--marker);border:1.5px solid var(--marker-edge);box-shadow:0 4px 8px rgba(2,6,23,0.14);cursor:pointer;pointer-events:auto;transition:transform 120ms ease, box-shadow 120ms ease, opacity 160ms ease;opacity:0.95;
 }
 
 /* highlighted and blinking states */
-.marker.highlight{box          <label>Quantity<input id="fieldQty" type="number" min="0-shadow:0 8px 20px rgba(34,197,94,0.28);transform:translate" /></label>
-          <div class="form-actions">
-            <button type="submit">Save</button>
-            <button type="button" id="deleteBtn" class="danger">Delete</button>
-          </div>
-       (-50%,-50%) scale(1.5);opacity:1}
-.marker.blink{animation: </form>
-      </div>
-    </div>
-    <div class="modal-backdrop"></div>
-  </blink 900ms steps(2, start) infinite}
-@keyframes blink{50%{opacity:0.div>
-
-  <!-- QR Scanner Modal -->
-  <div id="qrScannerModal" class="modal" aria-hidden="18}}
+.marker.highlight{box-shadow:0 8px 20px rgba(34,197,94,0.28);transform:translate(-50%,-50%) scale(1.5);opacity:1}
+.marker.blink{animation:blink 900ms steps(2, start) infinite}
+@keyframes blink{50%{opacity:0.18}}
 
 /* tooltip bubble (custom) */
 .marker[data-tooltip]:hover::after{
   content: attr(data-tooltip);
   position:fixed;
   background:var(--panel);
-  color:var(--text, #0ftrue">
-    <div class="modal-content">
-      <header172a);
+  color:var(--text, #0f172a);
   border:1px solid rgba(0,0,0,0.06);
   padding:6px 8px;
   border-radius:6px;
   font-size:12px;
-  box-shadow:0 6px 18px rgba(2,6,23><h3>QR Scanner</h3><,0.12);
+  box-shadow:0 6px 18px rgba(2,6,23,0.12);
   transform:translateY(-6px);
- button id="close white-space:nowrap;
+  white-space:nowrap;
   z-index:200;
-  left: calc(var(--Scanner">Close</tooltip-x, 0px));
+  left: calc(var(--tooltip-x, 0px));
   top: calc(var(--tooltip-y, 0px));
 }
 
 /* modal */
-.modal{display:none;position:fixed;inset:0;align-items:center;justifybutton></header>
--content:center;z-index:100}
+.modal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:100}
 .modal[aria-hidden="false"]{display:flex}
 .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.4)}
-.modal-content{position:relative;background:      <var(--panel);padding:12px;border-radius:10px;z-index:101;min-width:320pxdiv class;max-width:720px;box-shadow:var(--shadow)}
+.modal-content{position:relative;background:var(--panel);padding:12px;border-radius:10px;z-index:101;min-width:320px;max-width:720px;box-shadow:var(--shadow)}
 .modal-content header{display:flex;justify-content:space-between;align-items:center}
 .modal-body{padding:8px}
-.modal-body label{display:block;margin-bottom:8="modalpx}
-.modal-body input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0-body scanner,0,0.06)}
+.modal-body label{display:block;margin-bottom:8px}
+.modal-body input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)}
 .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-.form-actions button{padding:8px 10px;border">
-        <video-radius: id8px;border:1px solid rgba(0,0,0,0.06);cursor:pointer}
-.form-actions .danger{background:var(--danger);color:#fff;border="video:none}
+.form-actions button{padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);cursor:pointer}
+.form-actions .danger{background:var(--danger);color:#fff;border:none}
 
 /* scanner */
-.scanner video{width:100%;" autoplay mutedborder-radius:8px;background:#000}
+.scanner video{width:100%;border-radius:8px;background:#000}
 
 /* QR code */
 .qrcode{display:flex;justify-content:center;margin-top:12px}
 
 /* toast */
-.toast{position:fixed; playsinline></videoright:16px;bottom:16px;background:var(--panel);padding:10px>
-        <canvas 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);box-shadow:var(--shadow);display:none}
+.toast{position:fixed;right:16px;bottom:16px;background:var(--panel);padding:10px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);box-shadow:var(--shadow);display:none}
 
-/ id="scanCanvas* responsive */
-@media (" class="hiddenmax-width:900px){
+/* responsive */
+@media (max-width:900px){
   .main{flex-direction:column;padding:8px}
-  .panel{width:100%;height:auto;"></canvasmax-height:36vh}
+  .panel{width:100%;height:auto;max-height:36vh}
   .viewport{height:50vh}
-  .search-row input>
-       {min-width:120px}
+  .search-row input{min-width:120px}
 }
