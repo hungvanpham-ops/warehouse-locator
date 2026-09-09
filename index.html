@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Warehouse Locator</title>
-  <meta name="description" content="Warehouse Locator - chỉnh sửa vị trí trên bản đồ kho" />
+  <meta name="description" content="Warehouse Locator - define grid to place markers in rack centers" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>Warehouse Locator</h1>
-        <small>Interactive floorplan with correct markers</small>
+        <small>Place markers at rack centers using Define Grid</small>
       </div>
 
       <div class="top-controls">
@@ -23,6 +23,7 @@
         </div>
 
         <div class="actions-row">
+          <button id="defineGridBtn" title="Define grid">Define Grid</button>
           <button id="addModeBtn" title="Add location">Add Location</button>
           <button id="exportBtn" title="Export JSON">Export</button>
           <label class="import-label">
@@ -41,23 +42,26 @@
 
     <main class="main">
       <aside class="panel">
-        <h2>Matches</h2>
+        <h2>Regions & Matches</h2>
+        <div id="regions" class="regions"></div>
+
+        <h3>Matches</h3>
         <div id="matches" class="matches"></div>
 
-        <h2>Selected Location</h2>
+        <h3>Selected Location</h3>
         <div id="detail" class="detail">Click a marker to view or edit a location.</div>
 
         <div class="panel-foot">
-          <small>Tip: Click "Add Location" then click the map to create a new location.</small>
+          <small>Tip: Use Define Grid → drag rectangle over rack block → set rows × cols → Generate markers at centers.</small>
         </div>
       </aside>
 
       <section class="map-area">
         <div id="viewport" class="viewport">
-          <!-- mapInner will be sized to actual image natural size; transforms applied to mapInner -->
           <div id="mapInner" class="map-inner">
             <img id="floorplan" src="warehouse-layout.png" alt="Warehouse layout" draggable="false" />
             <div id="markers" class="markers"></div>
+            <div id="gridOverlay" class="grid-overlay" aria-hidden="true"></div>
           </div>
         </div>
       </section>
@@ -68,6 +72,26 @@
     </footer>
   </div>
 
+  <!-- Grid Modal -->
+  <div id="gridModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <header><h3>Define Grid</h3><button id="closeGrid">Close</button></header>
+      <div class="modal-body">
+        <form id="gridForm">
+          <label>Region name <input id="regionName" placeholder="Rack A1" /></label>
+          <label>Rows <input id="gridRows" type="number" min="1" value="4" required /></label>
+          <label>Cols <input id="gridCols" type="number" min="1" value="10" required /></label>
+          <label>Padding (%) <input id="gridPadding" type="number" min="0" max="20" value="2" /> <small>padding inside rect to avoid borders</small></label>
+          <div class="form-actions">
+            <button id="generateGrid" type="submit">Generate</button>
+            <button id="cancelGrid" type="button">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal-backdrop"></div>
+  </div>
+
   <!-- Edit Modal -->
   <div id="editModal" class="modal" aria-hidden="true">
     <div class="modal-content">
@@ -75,7 +99,7 @@
       <div class="modal-body">
         <form id="editForm">
           <label>Location ID<input id="fieldLocationId" required /></label>
-          <label>SKU<input id="fieldSKU" required /></label>
+          <label>SKU<input id="fieldSKU" /></label>
           <label>Product Name<input id="fieldName" /></label>
           <label>Quantity<input id="fieldQty" type="number" min="0" /></label>
           <div class="form-actions">
